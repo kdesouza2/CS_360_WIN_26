@@ -17,4 +17,3 @@
           (cons (first L) (removeDup (rest L)))))
 )
 
-(displayln (removeDup '(1 2 3 4 5 4 3 2 1)))

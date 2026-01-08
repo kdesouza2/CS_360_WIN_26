@@ -14,6 +14,19 @@
       '()
       (if (isMember? (first L) (rest L))
           (removeDup (rest L))
-          (cons (first L) (removeDup (rest L)))))
+          (cons (first L) (removeDup (rest L)))
+    )
+  )
 )
 
+;;; other version of removeDup using cond
+(define (remDup L)
+  (cond 
+    [(null? L) L]
+    [(isMember? (first L) (rest L)) (remDup (rest L))]
+    [else (cons (first L) (remDup (rest L)))]
+  )
+)
+
+;;; Notes
+;;; (range int) --> List: returns a list of integers from 0 up to the int given exclusively 

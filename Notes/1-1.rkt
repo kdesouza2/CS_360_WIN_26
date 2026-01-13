@@ -29,4 +29,4 @@
 )
 
 ;;; Notes
-;;; (range int) --> List: returns a list of integers from 0 up to the int given exclusively 
+;;; (range int) --> List: returns a list of integers from 0 up to the int given exclusively 2

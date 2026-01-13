@@ -1,6 +1,5 @@
 #lang racket
 
-
 ;;; Lab 1
 
 ;;; Q 1

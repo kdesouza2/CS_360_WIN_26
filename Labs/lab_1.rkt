@@ -80,6 +80,6 @@
 (define (reduce func init L)
     (if (null? L)
         init
-        (func )
+        (func (first L) (reduce func init (rest L)))
     )
 )

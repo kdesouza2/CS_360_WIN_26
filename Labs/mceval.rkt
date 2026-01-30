@@ -30,6 +30,7 @@
         ((begin? exp) 
          (eval-sequence (begin-actions exp) env))
         ((cond? exp) (mceval (cond->if exp) env))
+        ;;; ((let? bindings body) (mceval (let->app )))
         ((application? exp)
          (mcapply (mceval (operator exp) env)
                   (list-of-values (operands exp) env)))
@@ -183,6 +184,18 @@
 (define (cond->if exp)
   (expand-clauses (cond-clauses exp)))
 
+(define (let->app exp)
+  (make-lambda )
+)
+
+(define (let-vars exp)
+  (map car (cadr exp))
+)
+
+(define (let-values exp)
+  (map cdr (cadr exp))
+)
+
 (define (expand-clauses clauses)
   (if (null? clauses)
       'false                          ; no else clause
@@ -304,6 +317,9 @@
         (list 'cons cons)
         (list 'null? null?)
         (list '* *)
+        (list '= =)
+        (list '- -)
+        (list '+ +)
 ;;      more primitives
         ))
 

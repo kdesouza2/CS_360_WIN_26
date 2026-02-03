@@ -1,21 +1,23 @@
-#lang racket/base
-(require (except-in racket force delay))
+#lang racket
 (require racket/mpair)
+(require trace)
 
 
 ;;;;Ported to Racket by Geoffrey Mainland <mainland@cs.drexel.edu>
+;;;;Added value in driver-loop which gets actual value and
+;;;;added case for thunk in user-print
 
-;;;;METACIRCULAR EVALUATOR FROM CHAPTER 4 (SECTIONS 4.1.1-4.1.4) of
+;;;;LAZY EVALUATOR FROM SECTION 4.2 OF
 ;;;; STRUCTURE AND INTERPRETATION OF COMPUTER PROGRAMS
 
 ;;;;Matches code in ch4.scm
+;;;; Also includes enlarged primitive-procedures list
 
-;;;;This file can be loaded into Scheme as a whole.
-;;;;Then you can initialize and start the evaluator by evaluating
-;;;; the two commented-out lines at the end of the file (setting up the
-;;;; global environment and starting the driver loop).
+;;;;  To run without memoization, use the first version of force-it below
 
-;;;SECTION 4.1.1
+;;;SECTION 4.2.2
+
+;;; Modifying the evaluator
 
 (define (mceval exp env)
   (cond ((self-evaluating? exp) exp)
@@ -31,38 +33,131 @@
         ((begin? exp) 
          (eval-sequence (begin-actions exp) env))
         ((cond? exp) (mceval (cond->if exp) env))
-        ;;; ((let? bindings body) (mceval (let->app )))
-        ((application? exp)
-         (mcapply (mceval (operator exp) env)
-                  (list-of-values (operands exp) env)))
+        ((value? exp) (actual-value (first-operand (operands exp)) env))
+        ((application? exp)             ; clause from book
+         (mcapply (actual-value (operator exp) env)
+                  (operands exp)
+                  env))
         (else
          (error "Unknown expression type -- EVAL" exp))))
 
-(define (mcapply procedure arguments)
+(define (actual-value exp env)
+  (force-it (mceval exp env)))
+
+(define (value? exp) (tagged-list? exp 'value))
+
+(define (mcapply procedure arguments env)
   (cond ((primitive-procedure? procedure)
-         (apply-primitive-procedure procedure arguments))
+         (apply-primitive-procedure
+          procedure
+          (list-of-arg-values arguments env))) ; changed
         ((compound-procedure? procedure)
          (eval-sequence
-           (procedure-body procedure)
-           (extend-environment
-             (procedure-parameters procedure)
-             arguments
-             (procedure-environment procedure))))
+          (procedure-body procedure)
+          (extend-environment
+           (procedure-parameters procedure)
+           (list-of-delayed-args arguments env) ; changed
+           (procedure-environment procedure))))
         (else
          (error
           "Unknown procedure type -- APPLY" procedure))))
 
+(define (list-of-arg-values exps env)
+  (if (no-operands? exps)
+      '()
+      (cons (actual-value (first-operand exps) env)
+            (list-of-arg-values (rest-operands exps)
+                                env))))
+
+(define (list-of-delayed-args exps env)
+  (if (no-operands? exps)
+      '()
+      (cons (delay-it (first-operand exps) env)
+            (list-of-delayed-args (rest-operands exps)
+                                  env))))
+
+(define (eval-if exp env)
+  (if (true? (actual-value (if-predicate exp) env))
+      (mceval (if-consequent exp) env)
+      (mceval (if-alternative exp) env)))
+
+;;; Representing thunks
+
+;; non-memoizing version of force-it
+
+(define (force-it obj)
+  (if (thunk? obj)
+      (actual-value (thunk-exp obj) (thunk-env obj))
+      obj))
+
+;; thunks
+(define (mcadr l) (mcar (mcdr l)))
+(define (mcaddr l) (mcar (mcdr (mcdr l))))
+
+(define (tagged-mlist? exp tag)
+  (if (mpair? exp)
+      (eq? (mcar exp) tag)
+      false))
+
+(define (delay-it exp env)
+  (mlist 'thunk exp env))
+
+(define (thunk? obj)
+  (tagged-mlist? obj 'thunk))
+
+(define (thunk-exp thunk) (mcadr thunk))
+(define (thunk-env thunk) (mcaddr thunk))
+
+;; "thunk" that has been forced and is storing its (memoized) value
+(define (evaluated-thunk? obj)
+  (tagged-list? obj 'evaluated-thunk))
+
+(define (thunk-value evaluated-thunk) (cadr evaluated-thunk))
+
+
+;; memoizing version of force-it
+
+;(define (force-it obj)
+;  (cond ((thunk? obj)
+;         (let ((result (actual-value
+;                        (thunk-exp obj)
+;                        (thunk-env obj))))
+;           (set-mcar! obj 'evaluated-thunk)
+;           (set-mcar! (mcdr obj) result)  ; replace exp with its value
+;           (set-mcdr! (mcdr obj) '())     ; forget unneeded env
+;           result))
+;        ((evaluated-thunk? obj)
+;         (thunk-value obj))
+;        (else obj)))
+
+;; A longer list of primitives -- suitable for running everything in 4.2
+;; Overrides the list in ch4-mceval.scm
+
+(define primitive-procedures
+  (list (list 'car car)
+        (list 'cdr cdr)
+        (list 'cons cons)
+        (list 'null? null?)
+        (list 'list list)
+        (list '+ +)
+        (list '- -)
+        (list '* *)
+        (list '/ /)
+        (list '= =)
+        (list 'newline newline)
+        (list 'display display)
+;;      more primitives
+        ))
+
+;;
+;; Code from the original evaluator (unchanged)
+;;
 
 (define (list-of-values exps env)
   (if (no-operands? exps)
       '()
       (cons (mceval (first-operand exps) env)
             (list-of-values (rest-operands exps) env))))
-
-(define (eval-if exp env)
-  (if (true? (mceval (if-predicate exp) env))
-      (mceval (if-consequent exp) env)
-      (mceval (if-alternative exp) env)))
 
 (define (eval-sequence exps env)
   (cond ((last-exp? exps) (mceval (first-exp exps) env))
@@ -161,7 +256,6 @@
 
 (define (make-begin seq) (cons 'begin seq))
 
-
 (define (application? exp) (pair? exp))
 (define (operator exp) (car exp))
 (define (operands exp) (cdr exp))
@@ -184,18 +278,6 @@
 
 (define (cond->if exp)
   (expand-clauses (cond-clauses exp)))
-
-(define (let->app exp)
-  (make-lambda )
-)
-
-(define (let-vars exp)
-  (map car (cadr exp))
-)
-
-(define (let-values exp)
-  (map cdr (cadr exp))
-)
 
 (define (expand-clauses clauses)
   (if (null? clauses)
@@ -312,18 +394,6 @@
 
 (define (primitive-implementation proc) (cadr proc))
 
-(define primitive-procedures
-  (list (list 'car car)
-        (list 'cdr cdr)
-        (list 'cons cons)
-        (list 'null? null?)
-        (list '* *)
-        (list '= =)
-        (list '- -)
-        (list '+ +)
-;;      more primitives
-        ))
-
 (define (primitive-procedure-names)
   (map car
        primitive-procedures))
@@ -336,15 +406,23 @@
   (apply (primitive-implementation proc) args))
 
 (define (user-print object)
-  (if (compound-procedure? object)
+  (cond
+    [(compound-procedure? object)
       (display (list 'compound-procedure
                      (procedure-parameters object)
                      (procedure-body object)
-                     '<procedure-env>))
-      (display object)))
+                     '<procedure-env>))]
+    [(thunk? object)
+      (display (list 'thunk (thunk-exp object) '<thunk-env>))]
+    [else (display object)]
+    ))
 
 (define (top-mceval exp)
   (let ((val (mceval exp (setup-environment))))
+    (user-print val)))
+
+(define (top-actual-value exp)
+  (let ((val (actual-value exp (setup-environment))))
     (user-print val)))
 
 (define the-global-environment (setup-environment))
@@ -373,6 +451,4 @@
 (define (main . argv)
   (driver-loop))
 
-(provide mceval
-         setup-environment
-         main)
+(provide main)

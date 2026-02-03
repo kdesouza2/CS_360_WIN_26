@@ -10,3 +10,6 @@
 [submodule "homework-3-kdesouza2"]
 	path = homework-3-kdesouza2
 	url = https://github.com/Drexel-CS360-Winter-2026/homework-3-kdesouza2.git
+[submodule "homework-4-kdesouza2"]
+	path = homework-4-kdesouza2
+	url = https://github.com/Drexel-CS360-Winter-2026/homework-4-kdesouza2.git

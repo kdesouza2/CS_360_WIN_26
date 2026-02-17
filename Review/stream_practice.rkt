@@ -93,3 +93,66 @@
 (define (stream-naturals)
     (stream-cons 1 (stream-map add1 stream-naturals))
 )
+
+(define (stream-even s)
+    (stream-filter even? s)
+)
+
+(stream-even (stream-enumerate-interval 1 8))
+
+(define square
+  (let ((cache (make-hash))) ;;; creates a hash table for results called cache
+    (lambda (x)
+      (cond
+        [(hash-has-key? cache x) ;;; if we have already square x value
+         (hash-ref cache x)] ;;; return it's result
+
+        [else
+         (let ((result (* x x))) ;;; if no hash value for x, square x
+           (hash-set! cache x result) ;;; store result
+           result)])))) ;;; output result
+
+
+(define fibonacci
+  (let ((cache (make-hash)))
+    (lambda (n)
+      (cond
+        [(hash-has-key? cache n)
+         (hash-ref cache n)]
+
+        [else
+         (let ((result
+                (cond
+                  [(= n 0) 0]
+                  [(= n 1) 1]
+                  [else (+ (fibonacci (- n 1)) (fibonacci (- n 2)))]
+                )))
+           
+           (hash-set! cache n result)
+           result)])
+        )
+    )
+)
+
+(define stairs 
+    (let ((cache (make-hash)))
+        (lambda (s)
+            (cond
+                [(hash-has-key? cache s) (hash-ref cache s)]
+
+                [else
+                    (let ((result 
+                        (cond
+                            [(= s 1) 1]
+                            [(= s 2) 2]
+                            [else (+ (stairs (- s 1)) (stairs (- s 2)))]
+                        )
+                    ))
+                    (hash-set! cache s result)
+                    result)
+                ]
+            )
+        )
+    )
+)
+

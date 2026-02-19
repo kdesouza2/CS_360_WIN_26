@@ -1,0 +1,13 @@
+{
+	"name": "Racket 8.15",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".."
+	},
+
+	"containerUser": "drexelpl",
+
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/bash"
+	}
+}

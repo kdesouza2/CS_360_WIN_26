@@ -1,0 +1,20 @@
+on:
+  - push
+  - workflow_dispatch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v1.11
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: '8.15'
+      - name: Run Tests
+        run: make test

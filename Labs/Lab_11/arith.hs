@@ -1,12 +1,18 @@
 type Assoc k v = [(k,v)]
 type Env = Assoc Char Int
+
 find :: Eq k => k -> Assoc k v -> v
-find k t = head [v | (k',v) <- t, k == k']
+find k t = safehead [v | (k',v) <- t, k == k'] -- change to use safehead
+
+safehead :: [a] -> Maybe a
+safehead [] = Nothing
+safehead (x:_) = Just x
+
 
 data ArithExpr = Const Int
                | Var Char
-               | Add ArithExpr ArithExpr
-               | Mult ArithExpr ArithExpr
+               | Add ArithExpr ArithExpr -- change this using the do on slide 7
+               | Mult ArithExpr ArithExpr -- change this using the do on slide 7
                deriving Show
 
 eval :: ArithExpr -> Env -> Int
